@@ -41,6 +41,7 @@ public class Main {
                 System.out.println("ID: " + id + ", Name: " + name + ", Species: " + species + ", Age: " + age + ", Weight: " + weight);
             }
 
+
             resultSet.close();
             command.close();
             connection.close();
