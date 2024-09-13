@@ -1,5 +1,7 @@
 package org.example;
 
+import net.datafaker.Faker;
+import java.math.BigDecimal;
 import java.sql.*;
 import java.util.Scanner;
 
@@ -14,22 +16,23 @@ public class Main {
 
     public static void main(String[] args) {
         try {
-// Open a connection
+            // Open a connection
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
             System.out.println("Database connected successfully!");
-            // Create a statment object to send to the database
+
+            // Create a statement object to send to the database
             var command = connection.createStatement();
 
-            //createTableAnimals(command);
+            // Uncomment the following line to create the table (run once)
+            // createTableAnimals(command);
 
-            //create
-            //insertAnimal(connection);
+            // Insert 100000 records
+            //insertAnimalsBatch(connection, 100000);
 
-            //update
-            //updateAnimal(connection);
-
-            //delete
-            deleteAnimal(connection);
+            // edit, delete, create
+            // updateAnimal(connection);
+            // deleteAnimal(connection);
+            // insertAnimal(connection);
 
             // SQL query to select data
             String sql = "SELECT * FROM animals";
@@ -37,8 +40,7 @@ public class Main {
             // Execute the query and get a result set
             var resultSet = command.executeQuery(sql);
 
-            //show
-            // Process the result set
+            // show
             while (resultSet.next()) {
                 int id = resultSet.getInt("id");
                 String name = resultSet.getString("name");
@@ -49,12 +51,11 @@ public class Main {
                 System.out.println("ID: " + id + ", Name: " + name + ", Species: " + species + ", Age: " + age + ", Weight: " + weight);
             }
 
-
             resultSet.close();
             command.close();
             connection.close();
         } catch (SQLException e) {
-            System.out.println("Begin working"+e.getMessage());
+            System.out.println("Error: " + e.getMessage());
         }
     }
 
@@ -103,6 +104,34 @@ public class Main {
         }
         preparedStatement.close();
     }
+
+    private static void insertAnimalsBatch(Connection conn, int count) throws SQLException {
+        Faker faker = new Faker();
+        String sql = "INSERT INTO animals (name, species, age, weight) VALUES (?, ?, ?, ?)";
+
+        try (PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            for (int i = 0; i < count; i++) {
+                String name = faker.animal().name();
+                String species = faker.animal().species();
+                int age = faker.number().numberBetween(1, 15); // Random age between 1 and 15
+                double weight = faker.number().randomDouble(2, 1, 100); // Random weight between 1 and 100
+
+                preparedStatement.setString(1, name);
+                preparedStatement.setString(2, species);
+                preparedStatement.setInt(3, age);
+                preparedStatement.setBigDecimal(4, BigDecimal.valueOf(weight));
+
+                preparedStatement.addBatch();
+
+                if (i % 1000 == 0) {
+                    preparedStatement.executeBatch();
+                }
+            }
+            preparedStatement.executeBatch();
+        }
+        System.out.println("100000 records inserted successfully!");
+    }
+
     private static void deleteAnimal(Connection conn) throws SQLException {
         Scanner scanner = new Scanner(System.in);
         System.out.print("Вкажіть ID тварини для видалення ->_");
@@ -129,7 +158,7 @@ public class Main {
 
         System.out.print("Вкажіть ID тварини для редагування ->_");
         int id = scanner.nextInt();
-        scanner.nextLine();  // Пропустити новий рядок після ID
+        scanner.nextLine();
 
         System.out.print("Вкажіть нову назву ->_");
         String name = scanner.nextLine();
@@ -152,7 +181,7 @@ public class Main {
         preparedStatement.setString(1, name);
         preparedStatement.setString(2, species);
         preparedStatement.setInt(3, age);
-        preparedStatement.setBigDecimal(4, java.math.BigDecimal.valueOf(weight));
+        preparedStatement.setBigDecimal(4, BigDecimal.valueOf(weight));
         preparedStatement.setInt(5, id);
 
         // Execute the query
